@@ -1,8 +1,11 @@
 package com.wuming.blog.user.service;
 
+import com.wuming.blog.user.dto.UserLoginRequest;
+import com.wuming.blog.user.dto.UserLoginResponse;
 import com.wuming.blog.user.dto.UserRegisterRequest;
 import com.wuming.blog.user.entity.User;
 import com.wuming.blog.user.exception.DuplicateUsernameException;
+import com.wuming.blog.user.exception.InvalidLoginException;
 import com.wuming.blog.user.exception.InvalidUserRequestException;
 import com.wuming.blog.user.exception.UserNotFoundException;
 import com.wuming.blog.user.repository.UserRepository;
@@ -12,9 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-
-  //用户业务服务，负责注册、查询和密码加密等业务逻辑。
-
+/**
+ * 用户业务服务，负责注册、登录、查询和密码加密等业务逻辑。
+ */
 @Service
 public class UserService {
 
@@ -62,6 +65,37 @@ public class UserService {
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
         return userRepository.save(user);
+    }
+
+    /**
+     * 用户登录，校验用户名和 BCrypt 密码。
+     *
+     * @param request 登录请求参数
+     * @return 登录响应，token 当前阶段固定为 null
+     */
+    @Transactional(readOnly = true)
+    public UserLoginResponse login(UserLoginRequest request) {
+        if (request == null) {
+            throw new InvalidUserRequestException("请求参数不能为空");
+        }
+
+        String username = normalize(request.username());
+        String password = normalize(request.password());
+
+        if (username == null) {
+            throw new InvalidUserRequestException("用户名不能为空");
+        }
+        if (password == null) {
+            throw new InvalidUserRequestException("密码不能为空");
+        }
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new InvalidLoginException("用户名或密码错误"));
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new InvalidLoginException("用户名或密码错误");
+        }
+
+        return UserLoginResponse.from(user);
     }
 
     /**

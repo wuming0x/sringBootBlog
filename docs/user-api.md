@@ -7,8 +7,10 @@
 | `src/main/java/com/wuming/blog/user/entity/User.java` | 用户实体类，映射 `users` 表，保存用户名、BCrypt 密码密文和时间字段。 |
 | `src/main/java/com/wuming/blog/user/repository/UserRepository.java` | 用户数据访问层，提供用户名查重和查询能力。 |
 | `src/main/java/com/wuming/blog/user/service/UserService.java` | 用户业务层，处理注册、密码加密、重复用户名校验和查询。 |
-| `src/main/java/com/wuming/blog/user/controller/UserController.java` | 用户 REST 控制器，提供注册、按 id 查询、列表查询接口。 |
+| `src/main/java/com/wuming/blog/user/controller/UserController.java` | 用户 REST 控制器，提供注册、登录、按 id 查询、列表查询接口。 |
 | `src/main/java/com/wuming/blog/user/dto/UserRegisterRequest.java` | 用户注册请求体 DTO。 |
+| `src/main/java/com/wuming/blog/user/dto/UserLoginRequest.java` | 用户登录请求体 DTO。 |
+| `src/main/java/com/wuming/blog/user/dto/UserLoginResponse.java` | 用户登录响应 DTO，包含 `id`、`username`、`token`。 |
 | `src/main/java/com/wuming/blog/user/dto/UserResponse.java` | 用户响应 DTO，不包含密码字段。 |
 | `src/main/java/com/wuming/blog/user/dto/ApiErrorResponse.java` | 错误响应 DTO。 |
 | `src/main/java/com/wuming/blog/user/exception/*.java` | 用户模块异常和统一异常处理。 |
@@ -57,6 +59,49 @@
 {
   "message": "用户名不能为空",
   "timestamp": "2026-06-05T19:31:00"
+}
+```
+
+## 用户登录
+
+- 请求方法：`POST`
+- 请求路径：`/api/users/login`
+- 说明：使用用户名和密码登录。当前阶段只校验 BCrypt 密码，`token` 字段固定返回 `null`，预留给后续 JWT 升级。
+
+请求示例：
+
+```json
+{
+  "username": "alice",
+  "password": "123456"
+}
+```
+
+成功响应：`200 OK`
+
+```json
+{
+  "id": 1,
+  "username": "alice",
+  "token": null
+}
+```
+
+登录失败响应：`400 Bad Request`
+
+```json
+{
+  "message": "用户名或密码错误",
+  "timestamp": "2026-06-05T19:33:00"
+}
+```
+
+参数为空响应：`400 Bad Request`
+
+```json
+{
+  "message": "密码不能为空",
+  "timestamp": "2026-06-05T19:33:00"
 }
 ```
 

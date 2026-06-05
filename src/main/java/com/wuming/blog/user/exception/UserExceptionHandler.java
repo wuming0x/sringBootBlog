@@ -33,6 +33,16 @@ public class UserExceptionHandler {
     }
 
     /**
+     * 处理登录失败异常，返回 400。
+     */
+    @ExceptionHandler(InvalidLoginException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidLogin(InvalidLoginException exception) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiErrorResponse.of(exception.getMessage()));
+    }
+
+    /**
      * 处理用户不存在异常，返回 404。
      */
     @ExceptionHandler(UserNotFoundException.class)

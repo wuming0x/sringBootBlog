@@ -1,5 +1,7 @@
 package com.wuming.blog.user.controller;
 
+import com.wuming.blog.user.dto.UserLoginRequest;
+import com.wuming.blog.user.dto.UserLoginResponse;
 import com.wuming.blog.user.dto.UserRegisterRequest;
 import com.wuming.blog.user.dto.UserResponse;
 import com.wuming.blog.user.service.UserService;
@@ -37,6 +39,14 @@ public class UserController {
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse register(@RequestBody UserRegisterRequest request) {
         return UserResponse.from(userService.register(request));
+    }
+
+    /**
+     * 用户登录，登录成功后返回用户基础信息和预留 token 字段。
+     */
+    @PostMapping("/login")
+    public UserLoginResponse login(@RequestBody UserLoginRequest request) {
+        return userService.login(request);
     }
 
     /**
