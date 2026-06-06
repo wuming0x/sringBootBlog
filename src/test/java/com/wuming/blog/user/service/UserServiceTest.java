@@ -21,7 +21,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -54,7 +54,7 @@ class UserServiceTest {
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        userService = new UserService(userRepository, passwordEncoder);
+        userService = new UserService(userRepository, passwordEncoder, new JwtService("test-secret"));
     }
 
     /**
@@ -131,10 +131,10 @@ class UserServiceTest {
     }
 
     /**
-     * 登录成功时应返回用户信息，token 当前为 null。
+     * 登录成功时应返回用户信息和非空 JWT token。
      */
     @Test
-    void loginShouldReturnUserInfoWithNullToken() {
+    void loginShouldReturnUserInfoWithToken() {
         User user = buildUser("alice", "123456");
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
 
@@ -142,7 +142,23 @@ class UserServiceTest {
 
         assertEquals(1L, response.id());
         assertEquals("alice", response.username());
-        assertNull(response.token());
+        assertNotNull(response.token());
+    }
+
+    /**
+     * 有效 token 应能解析为当前登录用户。
+     */
+    @Test
+    void getCurrentUserShouldReturnUserFromToken() {
+        User user = buildUser("alice", "123456");
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        UserLoginResponse loginResponse = userService.login(new UserLoginRequest("alice", "123456"));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        User currentUser = userService.getCurrentUser("Bearer " + loginResponse.token());
+
+        assertEquals(1L, currentUser.getId());
+        assertEquals("alice", currentUser.getUsername());
     }
 
     /**

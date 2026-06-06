@@ -10,7 +10,8 @@
 | `src/main/java/com/wuming/blog/user/controller/UserController.java` | 用户 REST 控制器，提供注册、登录、按 id 查询、列表查询接口。 |
 | `src/main/java/com/wuming/blog/user/dto/UserRegisterRequest.java` | 用户注册请求体 DTO。 |
 | `src/main/java/com/wuming/blog/user/dto/UserLoginRequest.java` | 用户登录请求体 DTO。 |
-| `src/main/java/com/wuming/blog/user/dto/UserLoginResponse.java` | 用户登录响应 DTO，包含 `id`、`username`、`token`。 |
+| `src/main/java/com/wuming/blog/user/dto/UserLoginResponse.java` | 用户登录响应 DTO，包含 `id`、`username`、JWT `token`。 |
+| `src/main/java/com/wuming/blog/user/service/JwtService.java` | 轻量 JWT 服务，负责签发和解析登录令牌。 |
 | `src/main/java/com/wuming/blog/user/dto/UserResponse.java` | 用户响应 DTO，不包含密码字段。 |
 | `src/main/java/com/wuming/blog/user/dto/ApiErrorResponse.java` | 错误响应 DTO。 |
 | `src/main/java/com/wuming/blog/user/exception/*.java` | 用户模块异常和统一异常处理。 |
@@ -66,7 +67,7 @@
 
 - 请求方法：`POST`
 - 请求路径：`/api/users/login`
-- 说明：使用用户名和密码登录。当前阶段只校验 BCrypt 密码，`token` 字段固定返回 `null`，预留给后续 JWT 升级。
+- 说明：使用用户名和密码登录。登录成功后返回 JWT，后续需要登录的接口可通过 `Authorization: Bearer <token>` 传递身份。
 
 请求示例：
 
@@ -83,7 +84,7 @@
 {
   "id": 1,
   "username": "alice",
-  "token": null
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 

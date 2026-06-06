@@ -59,7 +59,7 @@ class UserControllerTest {
     void loginShouldReturnUserInfoWithTokenField() throws Exception {
         UserService userService = mock(UserService.class);
         MockMvc mockMvc = buildMockMvc(userService);
-        when(userService.login(any())).thenReturn(new UserLoginResponse(1L, "alice", null));
+        when(userService.login(any())).thenReturn(new UserLoginResponse(1L, "alice", "jwt-token"));
 
         mockMvc.perform(post("/api/users/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -72,7 +72,7 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.username").value("alice"))
-                .andExpect(jsonPath("$.token").value((String) null))
+                .andExpect(jsonPath("$.token").value("jwt-token"))
                 .andExpect(jsonPath("$.password").doesNotExist());
     }
 

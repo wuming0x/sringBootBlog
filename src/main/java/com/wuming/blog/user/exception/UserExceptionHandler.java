@@ -43,6 +43,16 @@ public class UserExceptionHandler {
     }
 
     /**
+     * 处理未认证异常，返回 401。
+     */
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnauthorized(UnauthorizedException exception) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiErrorResponse.of(exception.getMessage()));
+    }
+
+    /**
      * 处理用户不存在异常，返回 404。
      */
     @ExceptionHandler(UserNotFoundException.class)

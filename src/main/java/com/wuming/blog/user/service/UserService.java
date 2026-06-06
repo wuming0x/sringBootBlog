@@ -31,9 +31,15 @@ public class UserService {
      */
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    /**
+     * JWT 服务，用于生成和解析登录令牌。
+     */
+    private final JwtService jwtService;
+
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
     /**
@@ -71,7 +77,7 @@ public class UserService {
      * 用户登录，校验用户名和 BCrypt 密码。
      *
      * @param request 登录请求参数
-     * @return 登录响应，token 当前阶段固定为 null
+     * @return 登录响应，包含 JWT token
      */
     @Transactional(readOnly = true)
     public UserLoginResponse login(UserLoginRequest request) {
@@ -95,7 +101,21 @@ public class UserService {
             throw new InvalidLoginException("用户名或密码错误");
         }
 
-        return UserLoginResponse.from(user);
+        return UserLoginResponse.from(user, jwtService.generateToken(user));
+    }
+
+    /**
+     * 根据 Authorization 请求头解析当前登录用户。
+     *
+     * @param authorization Authorization 请求头
+     * @return 当前登录用户实体
+     */
+    @Transactional(readOnly = true)
+    public User getCurrentUser(String authorization) {
+        String token = extractBearerToken(authorization);
+        JwtService.JwtUser jwtUser = jwtService.parseToken(token);
+        return userRepository.findById(jwtUser.userId())
+                .orElseThrow(() -> new com.wuming.blog.user.exception.UnauthorizedException("未登录或登录已失效"));
     }
 
     /**
@@ -129,5 +149,19 @@ public class UserService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    /**
+     * 从 Authorization 请求头中提取 Bearer token。
+     */
+    private String extractBearerToken(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            throw new com.wuming.blog.user.exception.UnauthorizedException("未登录或登录已失效");
+        }
+        String token = authorization.substring("Bearer ".length()).trim();
+        if (token.isEmpty()) {
+            throw new com.wuming.blog.user.exception.UnauthorizedException("未登录或登录已失效");
+        }
+        return token;
     }
 }
