@@ -22,7 +22,7 @@
 Authorization: Bearer <token>
 ```
 
-未登录或 token 无效返回 `401 Unauthorized`。
+未登录或 token 无效返回 `401 Unauthorized`。删除评论允许评论作者、文章作者或管理员操作；管理员角色为 `ADMIN`。
 
 ## 查询文章评论列表
 
@@ -113,7 +113,7 @@ Authorization: Bearer <token>
 - 请求方法：`DELETE`
 - 请求路径：`/api/comments/{commentId}`
 - 是否需要登录：是
-- 说明：评论作者或文章作者可以删除评论，删除方式为物理删除。
+- 说明：评论作者、文章作者或管理员可以删除评论，删除方式为物理删除。
 
 成功响应：`204 No Content`
 

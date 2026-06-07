@@ -2,6 +2,7 @@ package com.wuming.blog.user.controller;
 
 import com.wuming.blog.user.dto.UserLoginResponse;
 import com.wuming.blog.user.entity.User;
+import com.wuming.blog.user.entity.UserRole;
 import com.wuming.blog.user.exception.InvalidLoginException;
 import com.wuming.blog.user.exception.UserExceptionHandler;
 import com.wuming.blog.user.service.UserService;
@@ -48,6 +49,7 @@ class UserControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.username").value("alice"))
+                .andExpect(jsonPath("$.role").value("USER"))
                 .andExpect(jsonPath("$.password").doesNotExist())
                 .andExpect(content().string(not(containsString("encoded-password"))));
     }
@@ -59,7 +61,7 @@ class UserControllerTest {
     void loginShouldReturnUserInfoWithTokenField() throws Exception {
         UserService userService = mock(UserService.class);
         MockMvc mockMvc = buildMockMvc(userService);
-        when(userService.login(any())).thenReturn(new UserLoginResponse(1L, "alice", "jwt-token"));
+        when(userService.login(any())).thenReturn(new UserLoginResponse(1L, "alice", "USER", "jwt-token"));
 
         mockMvc.perform(post("/api/users/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -72,6 +74,7 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.username").value("alice"))
+                .andExpect(jsonPath("$.role").value("USER"))
                 .andExpect(jsonPath("$.token").value("jwt-token"))
                 .andExpect(jsonPath("$.password").doesNotExist());
     }
@@ -116,6 +119,7 @@ class UserControllerTest {
         user.setId(1L);
         user.setUsername("alice");
         user.setPassword("encoded-password");
+        user.setRole(UserRole.USER);
         user.setCreatedAt(LocalDateTime.of(2026, 6, 5, 20, 0));
         user.setUpdatedAt(LocalDateTime.of(2026, 6, 5, 20, 0));
         return user;

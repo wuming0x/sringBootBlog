@@ -10,6 +10,7 @@ import com.wuming.blog.article.exception.ArticlePermissionException;
 import com.wuming.blog.article.exception.InvalidArticleRequestException;
 import com.wuming.blog.article.repository.ArticleRepository;
 import com.wuming.blog.user.entity.User;
+import com.wuming.blog.user.entity.UserRole;
 import com.wuming.blog.user.service.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -90,7 +91,7 @@ public class ArticleService {
     }
 
     /**
-     * 编辑文章，仅文章作者可以操作。
+     * 编辑文章，文章作者或管理员可以操作。
      */
     @Transactional
     public ArticleDetailResponse update(Long id, String authorization, ArticleRequest request) {
@@ -102,7 +103,7 @@ public class ArticleService {
     }
 
     /**
-     * 物理删除文章，仅文章作者可以操作。
+     * 物理删除文章，文章作者或管理员可以操作。
      */
     @Transactional
     public void delete(Long id, String authorization) {
@@ -145,10 +146,12 @@ public class ArticleService {
     }
 
     /**
-     * 校验当前用户是否为文章作者。
+     * 校验当前用户是否为文章作者或管理员。
      */
     private void checkAuthor(Article article, User currentUser) {
-        if (!article.getAuthor().getId().equals(currentUser.getId())) {
+        boolean isAuthor = article.getAuthor().getId().equals(currentUser.getId());
+        boolean isAdmin = currentUser.getRole() == UserRole.ADMIN;
+        if (!isAuthor && !isAdmin) {
             throw new ArticlePermissionException("无权操作该文章");
         }
     }

@@ -21,7 +21,7 @@
 Authorization: Bearer <token>
 ```
 
-未登录或 token 无效返回 `401 Unauthorized`。
+未登录或 token 无效返回 `401 Unauthorized`。编辑和删除文章允许文章作者或管理员操作；管理员角色为 `ADMIN`。
 
 ## 创建文章
 
@@ -126,7 +126,7 @@ Authorization: Bearer <token>
 
 - 请求方法：`PUT`
 - 请求路径：`/api/articles/{id}`
-- 是否需要登录：是，仅作者可编辑
+- 是否需要登录：是，文章作者或管理员可编辑
 
 请求示例：
 
@@ -153,7 +153,7 @@ Authorization: Bearer <token>
 }
 ```
 
-非作者操作响应：`403 Forbidden`
+无权限操作响应：`403 Forbidden`
 
 ```json
 {
@@ -166,7 +166,7 @@ Authorization: Bearer <token>
 
 - 请求方法：`DELETE`
 - 请求路径：`/api/articles/{id}`
-- 是否需要登录：是，仅作者可删除
+- 是否需要登录：是，文章作者或管理员可删除
 - 说明：删除方式为物理删除。
 
 成功响应：`204 No Content`

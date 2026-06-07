@@ -2,6 +2,8 @@ package com.wuming.blog.user.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -38,6 +40,13 @@ public class User {
     private String password;
 
     /**
+     * 用户角色，默认为普通用户。
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'USER'")
+    private UserRole role = UserRole.USER;
+
+    /**
      * 用户创建时间。
      */
     @Column(nullable = false, updatable = false)
@@ -54,6 +63,9 @@ public class User {
      */
     @PrePersist
     void prePersist() {
+        if (this.role == null) {
+            this.role = UserRole.USER;
+        }
         LocalDateTime now = LocalDateTime.now();
         this.createdAt = now;
         this.updatedAt = now;
@@ -89,6 +101,14 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
     }
 
     public LocalDateTime getCreatedAt() {

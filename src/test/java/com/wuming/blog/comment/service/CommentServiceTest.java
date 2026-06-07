@@ -12,6 +12,7 @@ import com.wuming.blog.comment.exception.CommentPermissionException;
 import com.wuming.blog.comment.exception.InvalidCommentRequestException;
 import com.wuming.blog.comment.repository.CommentRepository;
 import com.wuming.blog.user.entity.User;
+import com.wuming.blog.user.entity.UserRole;
 import com.wuming.blog.user.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -215,6 +216,23 @@ class CommentServiceTest {
     }
 
     /**
+     * 管理员可以删除任意评论。
+     */
+    @Test
+    void deleteShouldAllowAdmin() {
+        User articleAuthor = buildUser(1L, "alice");
+        User commentAuthor = buildUser(2L, "bob");
+        Comment comment = buildComment(1L, buildArticle(1L, articleAuthor), commentAuthor);
+        CommentService commentService = new CommentService(commentRepository, articleRepository, userService);
+        when(userService.getCurrentUser("Bearer token")).thenReturn(buildAdminUser(3L, "admin"));
+        when(commentRepository.findById(1L)).thenReturn(Optional.of(comment));
+
+        commentService.delete(1L, "Bearer token");
+
+        verify(commentRepository).delete(comment);
+    }
+
+    /**
      * 评论不存在时删除应抛出评论不存在异常。
      */
     @Test
@@ -238,6 +256,18 @@ class CommentServiceTest {
         User user = new User();
         user.setId(id);
         user.setUsername(username);
+        user.setRole(UserRole.USER);
+        return user;
+    }
+
+    /**
+     * 构造管理员用户实体。
+     */
+    private User buildAdminUser(Long id, String username) {
+        User user = new User();
+        user.setId(id);
+        user.setUsername(username);
+        user.setRole(UserRole.ADMIN);
         return user;
     }
 

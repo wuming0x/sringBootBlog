@@ -12,6 +12,7 @@ import com.wuming.blog.comment.exception.CommentPermissionException;
 import com.wuming.blog.comment.exception.InvalidCommentRequestException;
 import com.wuming.blog.comment.repository.CommentRepository;
 import com.wuming.blog.user.entity.User;
+import com.wuming.blog.user.entity.UserRole;
 import com.wuming.blog.user.service.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -92,7 +93,7 @@ public class CommentService {
     }
 
     /**
-     * 删除评论，评论作者或文章作者可以操作。
+     * 删除评论，评论作者、文章作者或管理员可以操作。
      */
     @Transactional
     public void delete(Long commentId, String authorization) {
@@ -125,7 +126,8 @@ public class CommentService {
         Long currentUserId = currentUser.getId();
         boolean isCommentAuthor = comment.getAuthor().getId().equals(currentUserId);
         boolean isArticleAuthor = comment.getArticle().getAuthor().getId().equals(currentUserId);
-        if (!isCommentAuthor && !isArticleAuthor) {
+        boolean isAdmin = currentUser.getRole() == UserRole.ADMIN;
+        if (!isCommentAuthor && !isArticleAuthor && !isAdmin) {
             throw new CommentPermissionException("无权删除该评论");
         }
     }
