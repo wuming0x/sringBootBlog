@@ -4,6 +4,7 @@ import com.wuming.blog.user.dto.UserLoginRequest;
 import com.wuming.blog.user.dto.UserLoginResponse;
 import com.wuming.blog.user.dto.UserRegisterRequest;
 import com.wuming.blog.user.entity.User;
+import com.wuming.blog.user.entity.UserRole;
 import com.wuming.blog.user.exception.DuplicateUsernameException;
 import com.wuming.blog.user.exception.InvalidLoginException;
 import com.wuming.blog.user.exception.InvalidUserRequestException;
@@ -70,6 +71,7 @@ public class UserService {
         User user = new User();
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
+        user.setRole(UserRole.USER);
         return userRepository.save(user);
     }
 

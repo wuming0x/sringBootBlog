@@ -9,6 +9,7 @@ import com.wuming.blog.article.exception.ArticlePermissionException;
 import com.wuming.blog.article.exception.InvalidArticleRequestException;
 import com.wuming.blog.article.repository.ArticleRepository;
 import com.wuming.blog.user.entity.User;
+import com.wuming.blog.user.entity.UserRole;
 import com.wuming.blog.user.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -179,6 +180,25 @@ class ArticleServiceTest {
     }
 
     /**
+     * 管理员可以编辑他人的文章。
+     */
+    @Test
+    void updateShouldAllowAdmin() {
+        Article article = buildArticle(1L, buildUser(1L, "alice"));
+        ArticleService articleService = new ArticleService(articleRepository, userService);
+        when(userService.getCurrentUser("Bearer token")).thenReturn(buildAdminUser(2L, "admin"));
+        when(articleRepository.findById(1L)).thenReturn(Optional.of(article));
+
+        ArticleDetailResponse response = articleService.update(
+                1L,
+                "Bearer token",
+                new ArticleRequest("管理员修改", "摘要", "正文")
+        );
+
+        assertEquals("管理员修改", response.title());
+    }
+
+    /**
      * 作者可以删除文章。
      */
     @Test
@@ -187,6 +207,21 @@ class ArticleServiceTest {
         Article article = buildArticle(1L, author);
         ArticleService articleService = new ArticleService(articleRepository, userService);
         when(userService.getCurrentUser("Bearer token")).thenReturn(author);
+        when(articleRepository.findById(1L)).thenReturn(Optional.of(article));
+
+        articleService.delete(1L, "Bearer token");
+
+        verify(articleRepository).delete(article);
+    }
+
+    /**
+     * 管理员可以删除他人的文章。
+     */
+    @Test
+    void deleteShouldAllowAdmin() {
+        Article article = buildArticle(1L, buildUser(1L, "alice"));
+        ArticleService articleService = new ArticleService(articleRepository, userService);
+        when(userService.getCurrentUser("Bearer token")).thenReturn(buildAdminUser(2L, "admin"));
         when(articleRepository.findById(1L)).thenReturn(Optional.of(article));
 
         articleService.delete(1L, "Bearer token");
@@ -217,6 +252,18 @@ class ArticleServiceTest {
         User user = new User();
         user.setId(id);
         user.setUsername(username);
+        user.setRole(UserRole.USER);
+        return user;
+    }
+
+    /**
+     * 构造管理员用户实体。
+     */
+    private User buildAdminUser(Long id, String username) {
+        User user = new User();
+        user.setId(id);
+        user.setUsername(username);
+        user.setRole(UserRole.ADMIN);
         return user;
     }
 

@@ -4,6 +4,7 @@ import com.wuming.blog.user.dto.UserLoginRequest;
 import com.wuming.blog.user.dto.UserLoginResponse;
 import com.wuming.blog.user.dto.UserRegisterRequest;
 import com.wuming.blog.user.entity.User;
+import com.wuming.blog.user.entity.UserRole;
 import com.wuming.blog.user.exception.DuplicateUsernameException;
 import com.wuming.blog.user.exception.InvalidLoginException;
 import com.wuming.blog.user.exception.InvalidUserRequestException;
@@ -77,6 +78,7 @@ class UserServiceTest {
         User userToSave = userCaptor.getValue();
         assertEquals("alice", savedUser.getUsername());
         assertEquals("alice", userToSave.getUsername());
+        assertEquals(UserRole.USER, userToSave.getRole());
         assertNotEquals("123456", userToSave.getPassword());
         assertTrue(passwordEncoder.matches("123456", userToSave.getPassword()));
     }
@@ -142,6 +144,7 @@ class UserServiceTest {
 
         assertEquals(1L, response.id());
         assertEquals("alice", response.username());
+        assertEquals("USER", response.role());
         assertNotNull(response.token());
     }
 
@@ -226,6 +229,7 @@ class UserServiceTest {
         user.setId(1L);
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(rawPassword));
+        user.setRole(UserRole.USER);
         return user;
     }
 }

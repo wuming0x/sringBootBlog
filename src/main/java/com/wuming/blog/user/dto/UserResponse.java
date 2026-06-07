@@ -9,12 +9,14 @@ import java.time.LocalDateTime;
  *
  * @param id 用户 ID
  * @param username 用户名
+ * @param role 用户角色
  * @param createdAt 创建时间
  * @param updatedAt 更新时间
  */
 public record UserResponse(
         Long id,
         String username,
+        String role,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -25,6 +27,7 @@ public record UserResponse(
         return new UserResponse(
                 user.getId(),
                 user.getUsername(),
+                user.getRole().name(),
                 user.getCreatedAt(),
                 user.getUpdatedAt()
         );
