@@ -50,7 +50,3 @@ application-dev.properties
 ## 部署
 部署参照发布说明
 
-
-## 部署
-
-部署参照application-dev.properties新建application-prod.properties参照发布说明进行部署
