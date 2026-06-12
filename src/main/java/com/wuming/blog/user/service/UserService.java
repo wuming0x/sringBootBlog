@@ -3,13 +3,16 @@ package com.wuming.blog.user.service;
 import com.wuming.blog.user.dto.UserLoginRequest;
 import com.wuming.blog.user.dto.UserLoginResponse;
 import com.wuming.blog.user.dto.UserRegisterRequest;
+import com.wuming.blog.user.dto.UserRoleUpdateRequest;
 import com.wuming.blog.user.entity.User;
 import com.wuming.blog.user.entity.UserRole;
 import com.wuming.blog.user.exception.DuplicateUsernameException;
 import com.wuming.blog.user.exception.InvalidLoginException;
 import com.wuming.blog.user.exception.InvalidUserRequestException;
 import com.wuming.blog.user.exception.UserNotFoundException;
+import com.wuming.blog.user.exception.UserPermissionException;
 import com.wuming.blog.user.repository.UserRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -137,9 +140,94 @@ public class UserService {
      *
      * @return 用户列表
      */
+    /**
+     * 管理员按 ID 查询用户详情，不返回密码字段的转换由 Controller 负责。
+     *
+     * @param id 用户 ID
+     * @param authorization Authorization 请求头，必须属于管理员
+     * @return 用户实体
+     */
     @Transactional(readOnly = true)
-    public List<User> listUsers() {
+    public User getByIdForAdmin(Long id, String authorization) {
+        requireAdmin(authorization);
+        return getById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<User> listUsers(String authorization) {
+        requireAdmin(authorization);
         return userRepository.findAll();
+    }
+
+    /**
+     * 管理员修改指定用户角色。为了避免管理员误把自己锁出后台，禁止自我降级。
+     *
+     * @param id 用户 ID
+     * @param authorization Authorization 请求头，必须属于管理员
+     * @param request 角色修改请求
+     * @return 修改后的用户
+     */
+    @Transactional
+    public User updateRole(Long id, String authorization, UserRoleUpdateRequest request) {
+        User admin = requireAdmin(authorization);
+        User user = getById(id);
+        UserRole role = parseRole(request);
+
+        if (admin.getId().equals(user.getId()) && role == UserRole.USER) {
+            throw new UserPermissionException("管理员不能将自己降级为普通用户");
+        }
+
+        user.setRole(role);
+        return user;
+    }
+
+    /**
+     * 管理员删除指定用户。为了保证后台可继续访问，禁止管理员删除自己的账号。
+     *
+     * @param id 用户 ID
+     * @param authorization Authorization 请求头，必须属于管理员
+     */
+    @Transactional
+    public void deleteUser(Long id, String authorization) {
+        User admin = requireAdmin(authorization);
+        User user = getById(id);
+
+        if (admin.getId().equals(user.getId())) {
+            throw new UserPermissionException("管理员不能删除自己的账号");
+        }
+
+        try {
+            userRepository.delete(user);
+            userRepository.flush();
+        } catch (DataIntegrityViolationException exception) {
+            throw new InvalidUserRequestException("该用户已关联文章或评论，不能直接删除");
+        }
+    }
+
+    /**
+     * 解析并校验角色请求，避免写入 USER/ADMIN 之外的非法角色。
+     */
+    private UserRole parseRole(UserRoleUpdateRequest request) {
+        if (request == null || normalize(request.role()) == null) {
+            throw new InvalidUserRequestException("用户角色不能为空");
+        }
+
+        try {
+            return UserRole.valueOf(normalize(request.role()).toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new InvalidUserRequestException("用户角色只能是 USER 或 ADMIN");
+        }
+    }
+
+    /**
+     * 从 Authorization 中解析当前用户，并确认其为管理员。
+     */
+    private User requireAdmin(String authorization) {
+        User currentUser = getCurrentUser(authorization);
+        if (currentUser.getRole() != UserRole.ADMIN) {
+            throw new UserPermissionException("只有管理员可以执行该操作");
+        }
+        return currentUser;
     }
 
     /**

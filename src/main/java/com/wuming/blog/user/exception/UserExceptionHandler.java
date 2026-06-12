@@ -53,6 +53,16 @@ public class UserExceptionHandler {
     }
 
     /**
+     * 处理用户管理权限异常，返回 403。
+     */
+    @ExceptionHandler(UserPermissionException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserPermission(UserPermissionException exception) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiErrorResponse.of(exception.getMessage()));
+    }
+
+    /**
      * 处理用户不存在异常，返回 404。
      */
     @ExceptionHandler(UserNotFoundException.class)
