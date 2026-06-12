@@ -4,12 +4,16 @@ import com.wuming.blog.user.dto.UserLoginRequest;
 import com.wuming.blog.user.dto.UserLoginResponse;
 import com.wuming.blog.user.dto.UserRegisterRequest;
 import com.wuming.blog.user.dto.UserResponse;
+import com.wuming.blog.user.dto.UserRoleUpdateRequest;
 import com.wuming.blog.user.service.UserService;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -53,18 +57,45 @@ public class UserController {
      * 根据用户 ID 查询用户基础信息。
      */
     @GetMapping("/{id}")
-    public UserResponse getById(@PathVariable Long id) {
-        return UserResponse.from(userService.getById(id));
+    public UserResponse getById(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        return UserResponse.from(userService.getByIdForAdmin(id, authorization));
     }
 
     /**
      * 查询用户列表。
      */
     @GetMapping
-    public List<UserResponse> listUsers() {
-        return userService.listUsers()
+    public List<UserResponse> listUsers(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        return userService.listUsers(authorization)
                 .stream()
                 .map(UserResponse::from)
                 .toList();
+    }
+
+    /**
+     * 管理员修改指定用户角色，禁止管理员将自己降级为普通用户。
+     */
+    @PutMapping("/{id}/role")
+    public UserResponse updateRole(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestBody UserRoleUpdateRequest request
+    ) {
+        return UserResponse.from(userService.updateRole(id, authorization, request));
+    }
+
+    /**
+     * 管理员删除指定用户，禁止删除自己的账号。
+     */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteUser(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        userService.deleteUser(id, authorization);
     }
 }

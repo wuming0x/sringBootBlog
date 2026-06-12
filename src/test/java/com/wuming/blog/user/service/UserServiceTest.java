@@ -3,11 +3,15 @@ package com.wuming.blog.user.service;
 import com.wuming.blog.user.dto.UserLoginRequest;
 import com.wuming.blog.user.dto.UserLoginResponse;
 import com.wuming.blog.user.dto.UserRegisterRequest;
+import com.wuming.blog.user.dto.UserRoleUpdateRequest;
 import com.wuming.blog.user.entity.User;
 import com.wuming.blog.user.entity.UserRole;
 import com.wuming.blog.user.exception.DuplicateUsernameException;
 import com.wuming.blog.user.exception.InvalidLoginException;
 import com.wuming.blog.user.exception.InvalidUserRequestException;
+import com.wuming.blog.user.exception.UnauthorizedException;
+import com.wuming.blog.user.exception.UserNotFoundException;
+import com.wuming.blog.user.exception.UserPermissionException;
 import com.wuming.blog.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -165,6 +169,137 @@ class UserServiceTest {
     }
 
     /**
+     * 管理员可以查询用户列表。
+     */
+    @Test
+    void listUsersShouldAllowAdmin() {
+        User admin = buildUser(1L, "admin", "123456", UserRole.ADMIN);
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+        UserLoginResponse loginResponse = userService.login(new UserLoginRequest("admin", "123456"));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+
+        userService.listUsers("Bearer " + loginResponse.token());
+
+        verify(userRepository).findAll();
+    }
+
+    /**
+     * 普通用户不能访问管理员用户列表。
+     */
+    @Test
+    void listUsersShouldRejectNormalUser() {
+        User user = buildUser("alice", "123456");
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        UserLoginResponse loginResponse = userService.login(new UserLoginRequest("alice", "123456"));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        UserPermissionException exception = assertThrows(
+                UserPermissionException.class,
+                () -> userService.listUsers("Bearer " + loginResponse.token())
+        );
+
+        assertEquals("只有管理员可以执行该操作", exception.getMessage());
+        verify(userRepository, never()).findAll();
+    }
+
+    /**
+     * 缺少 token 时不能访问管理员用户列表。
+     */
+    @Test
+    void listUsersShouldRejectMissingToken() {
+        assertThrows(UnauthorizedException.class, () -> userService.listUsers(null));
+        verify(userRepository, never()).findAll();
+    }
+
+    /**
+     * 管理员可以修改其他用户角色。
+     */
+    @Test
+    void updateRoleShouldAllowAdminToChangeOtherUser() {
+        User admin = buildUser(1L, "admin", "123456", UserRole.ADMIN);
+        User user = buildUser(2L, "alice", "123456", UserRole.USER);
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+        UserLoginResponse loginResponse = userService.login(new UserLoginRequest("admin", "123456"));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+
+        User updatedUser = userService.updateRole(2L, "Bearer " + loginResponse.token(), new UserRoleUpdateRequest("ADMIN"));
+
+        assertEquals(UserRole.ADMIN, updatedUser.getRole());
+    }
+
+    /**
+     * 管理员不能把自己降级为普通用户，避免失去后台入口。
+     */
+    @Test
+    void updateRoleShouldRejectSelfDemotion() {
+        User admin = buildUser(1L, "admin", "123456", UserRole.ADMIN);
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+        UserLoginResponse loginResponse = userService.login(new UserLoginRequest("admin", "123456"));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+
+        UserPermissionException exception = assertThrows(
+                UserPermissionException.class,
+                () -> userService.updateRole(1L, "Bearer " + loginResponse.token(), new UserRoleUpdateRequest("USER"))
+        );
+
+        assertEquals("管理员不能将自己降级为普通用户", exception.getMessage());
+        assertEquals(UserRole.ADMIN, admin.getRole());
+    }
+
+    /**
+     * 管理员可以删除其他用户。
+     */
+    @Test
+    void deleteUserShouldAllowAdminToDeleteOtherUser() {
+        User admin = buildUser(1L, "admin", "123456", UserRole.ADMIN);
+        User user = buildUser(2L, "alice", "123456", UserRole.USER);
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+        UserLoginResponse loginResponse = userService.login(new UserLoginRequest("admin", "123456"));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+
+        userService.deleteUser(2L, "Bearer " + loginResponse.token());
+
+        verify(userRepository).delete(user);
+        verify(userRepository).flush();
+    }
+
+    /**
+     * 管理员不能删除自己的账号，避免系统没有可用后台账号。
+     */
+    @Test
+    void deleteUserShouldRejectSelfDelete() {
+        User admin = buildUser(1L, "admin", "123456", UserRole.ADMIN);
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+        UserLoginResponse loginResponse = userService.login(new UserLoginRequest("admin", "123456"));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+
+        UserPermissionException exception = assertThrows(
+                UserPermissionException.class,
+                () -> userService.deleteUser(1L, "Bearer " + loginResponse.token())
+        );
+
+        assertEquals("管理员不能删除自己的账号", exception.getMessage());
+        verify(userRepository, never()).delete(any(User.class));
+    }
+
+    /**
+     * 管理员操作不存在的用户时返回用户不存在异常。
+     */
+    @Test
+    void deleteUserShouldRejectUnknownUser() {
+        User admin = buildUser(1L, "admin", "123456", UserRole.ADMIN);
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
+        UserLoginResponse loginResponse = userService.login(new UserLoginRequest("admin", "123456"));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class, () -> userService.deleteUser(99L, "Bearer " + loginResponse.token()));
+        verify(userRepository, never()).delete(any(User.class));
+    }
+
+    /**
      * 登录用户名为空时应抛出参数异常。
      */
     @Test
@@ -225,11 +360,18 @@ class UserServiceTest {
      * 构造带 BCrypt 密码的用户实体。
      */
     private User buildUser(String username, String rawPassword) {
+        return buildUser(1L, username, rawPassword, UserRole.USER);
+    }
+
+    /**
+     * 构造指定 ID 和角色的测试用户。
+     */
+    private User buildUser(Long id, String username, String rawPassword, UserRole role) {
         User user = new User();
-        user.setId(1L);
+        user.setId(id);
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(rawPassword));
-        user.setRole(UserRole.USER);
+        user.setRole(role);
         return user;
     }
 }
